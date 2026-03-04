@@ -40,7 +40,20 @@ const AdminDashboard = () => {
     }, [activeTab]);
 
     const fetchData = async () => {
-        setLoading(true);
+        // Prevent aggressive screen clearing. Only show full-screen loader if we have absolutely no data yet.
+        const needsLoadingScreen =
+            (activeTab === 'menu' && menus.length === 0) ||
+            (activeTab === 'reservations' && reservations.length === 0) ||
+            (activeTab === 'reviews' && reviews.length === 0) ||
+            (activeTab === 'orders' && orders.length === 0) ||
+            (activeTab === 'users' && users.length === 0) ||
+            (activeTab === 'coupons' && coupons.length === 0) ||
+            (activeTab === 'overview' && !analytics);
+
+        if (needsLoadingScreen) {
+            setLoading(true);
+        }
+
         try {
             if (activeTab === 'menu') {
                 const { data } = await api.get('/menu');
@@ -105,11 +118,15 @@ const AdminDashboard = () => {
 
     const handleDeleteMenu = async (id) => {
         if (window.confirm('Delete this item?')) {
+            // Optimistic update
+            const originalMenus = [...menus];
+            setMenus(menus.filter(m => m._id !== id));
             try {
                 await api.delete(`/menu/${id}`);
-                fetchData();
+                fetchData(); // Background sync
             } catch (error) {
                 console.error(error);
+                setMenus(originalMenus);
             }
         }
     };
@@ -125,20 +142,27 @@ const AdminDashboard = () => {
     };
 
     const handleSaveEdit = async (id) => {
+        // Optimistic update
+        const originalMenus = [...menus];
+        setMenus(menus.map(m => m._id === id ? { ...m, ...editMenuData } : m));
+        setEditingMenuId(null);
         try {
             await api.put(`/menu/${id}`, editMenuData);
-            setEditingMenuId(null);
-            fetchData();
+            fetchData(); // Background sync
         } catch (error) {
             console.error(error);
+            setMenus(originalMenus);
             alert('Failed to update item');
         }
     };
 
     // --- Reservation Handlers ---
     const updateReservationStatus = async (id, status) => {
+        // Optimistic update
+        setReservations(reservations.map(res => res._id === id ? { ...res, status } : res));
         try {
             await api.put(`/reservations/${id}/status`, { status });
+            // Background sync
             fetchData();
         } catch (error) {
             console.error(error);
@@ -146,8 +170,11 @@ const AdminDashboard = () => {
     };
 
     const updateOrderStatus = async (id, newStatus) => {
+        // Optimistic update
+        setOrders(orders.map(order => order._id === id ? { ...order, status: newStatus } : order));
         try {
             await api.put(`/orders/${id}/status`, { status: newStatus });
+            // Background sync
             fetchData();
         } catch (error) {
             console.error(error);
@@ -157,41 +184,50 @@ const AdminDashboard = () => {
 
     // --- User Handlers ---
     const updateUserRole = async (user) => {
+        // Optimistic update
+        const newRole = user.role === 'admin' ? 'user' : 'admin';
+        setUsers(users.map(u => u._id === user._id ? { ...u, role: newRole, isAdmin: newRole === 'admin' } : u));
         try {
-            await api.put(`/users/${user._id}`, { role: user.role === 'admin' ? 'user' : 'admin' });
-            fetchData();
+            await api.put(`/users/${user._id}`, { role: newRole });
         } catch (error) {
             console.error(error);
             alert('Failed to update role');
+            fetchData(); // Sync on fail
         }
     };
 
     const toggleUserStatus = async (user) => {
+        // Optimistic update
+        setUsers(users.map(u => u._id === user._id ? { ...u, isActive: !user.isActive } : u));
         try {
             await api.put(`/users/${user._id}`, { isActive: !user.isActive });
-            fetchData();
         } catch (error) {
             console.error(error);
             alert('Failed to update status');
+            fetchData(); // Sync on fail
         }
     };
 
     // --- Review Handlers ---
     const approveReview = async (id) => {
+        setReviews(reviews.map(r => r._id === id ? { ...r, isApproved: true } : r));
         try {
             await api.put(`/reviews/${id}/approve`);
             fetchData();
         } catch (error) {
             console.error(error);
+            fetchData();
         }
     };
 
     const deleteReview = async (id) => {
+        setReviews(reviews.filter(r => r._id !== id));
         try {
             await api.delete(`/reviews/${id}`);
             fetchData();
         } catch (error) {
             console.error(error);
+            fetchData();
         }
     };
 
@@ -212,21 +248,25 @@ const AdminDashboard = () => {
     };
 
     const toggleCouponStatus = async (id) => {
+        setCoupons(coupons.map(c => c._id === id ? { ...c, isActive: !c.isActive } : c));
         try {
             await api.put(`/coupons/${id}/status`);
             fetchData();
         } catch (error) {
             console.error(error);
+            fetchData();
         }
     };
 
     const deleteCoupon = async (id) => {
         if (window.confirm('Delete this coupon?')) {
+            setCoupons(coupons.filter(c => c._id !== id));
             try {
                 await api.delete(`/coupons/${id}`);
                 fetchData();
             } catch (error) {
                 console.error(error);
+                fetchData();
             }
         }
     };
