@@ -26,6 +26,10 @@ const AdminDashboard = () => {
     const [imageFile, setImageFile] = useState(null);
     const [uploading, setUploading] = useState(false);
 
+    // Edit Menu State
+    const [editingMenuId, setEditingMenuId] = useState(null);
+    const [editMenuData, setEditMenuData] = useState({});
+
     // New Coupon State
     const [newCoupon, setNewCoupon] = useState({
         code: '', discountPercentage: '', expiryDate: '', usageLimit: ''
@@ -107,6 +111,27 @@ const AdminDashboard = () => {
             } catch (error) {
                 console.error(error);
             }
+        }
+    };
+
+    const handleEditClick = (item) => {
+        setEditingMenuId(item._id);
+        setEditMenuData(item);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMenuId(null);
+        setEditMenuData({});
+    };
+
+    const handleSaveEdit = async (id) => {
+        try {
+            await api.put(`/menu/${id}`, editMenuData);
+            setEditingMenuId(null);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update item');
         }
     };
 
@@ -378,16 +403,48 @@ const AdminDashboard = () => {
                                         <div key={item._id} className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col">
                                             <img src={item.image} alt={item.name} className="w-full h-40 object-cover" />
                                             <div className="p-4 flex-grow flex flex-col justify-between">
-                                                <div>
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <h4 className="font-bold text-gray-900 line-clamp-1">{item.name}</h4>
-                                                        <span className="text-primary-darkred font-bold">${item.price.toFixed(2)}</span>
+                                                {editingMenuId === item._id ? (
+                                                    <div className="flex flex-col gap-2 mb-4">
+                                                        <input type="text" value={editMenuData.name} onChange={(e) => setEditMenuData({ ...editMenuData, name: e.target.value })} className="border p-2 rounded text-sm w-full font-bold bg-gray-50 focus:bg-white" />
+                                                        <div className="flex gap-2">
+                                                            <div className="relative w-1/2">
+                                                                <span className="absolute left-2 top-2 text-gray-500 font-bold">$</span>
+                                                                <input type="number" step="0.01" value={editMenuData.price} onChange={(e) => setEditMenuData({ ...editMenuData, price: e.target.value })} className="border pl-6 p-2 rounded text-sm w-full font-bold bg-gray-50 focus:bg-white" />
+                                                            </div>
+                                                            <select value={editMenuData.category} onChange={(e) => setEditMenuData({ ...editMenuData, category: e.target.value })} className="border p-2 rounded text-sm w-1/2 bg-gray-50 focus:bg-white">
+                                                                {['Tacos', 'Burritos', 'Quesadillas', 'Fajitas', 'Appetizers', 'Drinks', 'Vegetarian/Vegan'].map(c => <option key={c} value={c}>{c}</option>)}
+                                                            </select>
+                                                        </div>
                                                     </div>
-                                                    <p className="text-xs text-gray-500 mb-4 bg-gray-100 inline-block px-2 py-1 rounded">{item.category}</p>
-                                                </div>
-                                                <button onClick={() => handleDeleteMenu(item._id)} className="w-full flex items-center justify-center py-2 text-sm text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-colors">
-                                                    <FaTrash className="mr-2" /> Delete Item
-                                                </button>
+                                                ) : (
+                                                    <div>
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h4 className="font-bold text-gray-900 line-clamp-1">{item.name}</h4>
+                                                            <span className="text-primary-darkred font-bold">${item.price.toFixed(2)}</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mb-4 bg-gray-100 inline-block px-2 py-1 rounded">{item.category}</p>
+                                                    </div>
+                                                )}
+
+                                                {editingMenuId === item._id ? (
+                                                    <div className="flex gap-2 mt-auto">
+                                                        <button onClick={() => handleSaveEdit(item._id)} className="flex-1 flex items-center justify-center py-2 text-sm text-green-600 border border-green-200 hover:bg-green-50 rounded-lg transition-colors font-bold">
+                                                            <FaCheck className="mr-1" /> Save
+                                                        </button>
+                                                        <button onClick={handleCancelEdit} className="flex-1 flex items-center justify-center py-2 text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors font-bold">
+                                                            <FaTimes className="mr-1" /> Cancel
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex gap-2 mt-auto">
+                                                        <button onClick={() => handleEditClick(item)} className="flex-1 flex items-center justify-center py-2 text-sm text-blue-600 border border-blue-200 hover:bg-blue-50 rounded-lg transition-colors font-bold">
+                                                            Edit
+                                                        </button>
+                                                        <button onClick={() => handleDeleteMenu(item._id)} className="flex-1 flex items-center justify-center py-2 text-sm text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-colors font-bold">
+                                                            <FaTrash className="mr-1" /> Delete
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
