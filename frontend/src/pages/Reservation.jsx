@@ -2,6 +2,37 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
+const generateTimeSlots = () => {
+    const slots = [];
+
+    // Lunch: 12:15 PM to 3:00 PM
+    let h = 12;
+    let m = 15;
+    while (h < 15 || (h === 15 && m === 0)) {
+        const displayH = h > 12 ? h - 12 : h;
+        const displayM = m === 0 ? '00' : m;
+        const valueH = h < 10 ? `0${h}` : h;
+        slots.push({ label: `${displayH}:${displayM} PM`, value: `${valueH}:${displayM}`, group: 'Lunch' });
+        m += 15;
+        if (m === 60) { m = 0; h += 1; }
+    }
+
+    // Dinner: 3:15 PM to 11:45 PM
+    h = 15;
+    m = 15;
+    while (h < 23 || (h === 23 && m <= 45)) {
+        const displayH = h > 12 ? h - 12 : h;
+        const displayM = m === 0 ? '00' : m;
+        const valueH = h < 10 ? `0${h}` : h;
+        slots.push({ label: `${displayH}:${displayM} PM`, value: `${valueH}:${displayM}`, group: 'Dinner' });
+        m += 15;
+        if (m === 60) { m = 0; h += 1; }
+    }
+    return slots;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+
 const Reservation = () => {
     const [formData, setFormData] = useState({
         name: '',
@@ -143,14 +174,25 @@ const Reservation = () => {
                             </div>
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Time</label>
-                                <input
-                                    type="time"
+                                <select
                                     name="time"
                                     required
                                     value={formData.time}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-terracotta focus:border-transparent transition-all"
-                                />
+                                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-terracotta focus:border-transparent transition-all appearance-none bg-white"
+                                >
+                                    <option value="" disabled>Select a time</option>
+                                    <optgroup label="Lunch Service">
+                                        {TIME_SLOTS.filter(s => s.group === 'Lunch').map(slot => (
+                                            <option key={slot.value} value={slot.value}>{slot.label}</option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Dinner Service">
+                                        {TIME_SLOTS.filter(s => s.group === 'Dinner').map(slot => (
+                                            <option key={slot.value} value={slot.value}>{slot.label}</option>
+                                        ))}
+                                    </optgroup>
+                                </select>
                             </div>
                         </div>
 
